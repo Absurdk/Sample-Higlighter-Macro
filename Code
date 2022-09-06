@@ -1,0 +1,243 @@
+Sub uniqueid()
+
+    Dim rg          As Range
+    Dim cl          As Range
+
+    Set rg = Sheet2.Range("AH1")
+    Set cl = Sheet2.Range("AH:AH")
+
+    rg.Value = 1
+
+    'autofill consecutive numbers as IDs
+
+    Range("AH1").AutoFill Range("AH1:AH" & Range("A" & Rows.Count).End(xlUp).Row), xlFillSeries
+
+End Sub
+
+Sub distro()
+
+Call cleardistro
+Call uniqueid
+
+    
+    Dim srcWS       As Worksheet
+    Dim destWS      As Worksheet
+    Dim critWS      As Worksheet
+    Dim i           As Long
+    Dim usedRowsDic As Object
+    Dim outArray()  As Variant
+    Dim lastrow     As Long
+    Dim bigArray    As Variant
+    Dim desiredRecs As Long
+    Dim recsGathered As Long
+    Dim rec         As Long
+    Dim cnty        As Long
+    
+    Set srcWS = ThisWorkbook.Worksheets("Audit")
+    Set destWS = ThisWorkbook.Worksheets("Distro")
+    Set critWS = ThisWorkbook.Worksheets("For Distribution And PBI")
+    Set usedRowsDic = CreateObject("scripting.dictionary")
+    
+    'agent variables
+    
+    Dim upinr       As Range
+    Dim distrocop   As Range
+    Dim sampleq     As Integer
+    Dim cntr        As Long
+    Dim lastrowu    As Long
+    
+    
+    lastrowu = Sheets("For Distribution And PBI").Cells(Rows.Count, 1).End(xlUp).Row - 1
+    
+    'Get list of only visible upins
+        
+    Sheets("For Distribution And PBI").Range("B3", "N" & lastrowu).SpecialCells(xlCellTypeVisible).Copy
+    
+    ActiveSheet.Paste Destination:=Sheet11.Range("A1")
+    lastrowu = Sheet11.Cells(Rows.Count, 1).End(xlUp).Row
+
+    desiredRecs = critWS.Range("L49").Value
+    
+    lastrow = srcWS.Range("A" & Rows.Count).End(xlUp).Row
+    
+    bigArray = srcWS.Range("A1:AH" & lastrow)
+    
+    ReDim outArray(LBound(bigArray, 1) To desiredRecs, LBound(bigArray, 2) To UBound(bigArray, 2))
+    
+'US LOOP
+    
+    Dim destino As Range
+    Dim source As Range
+    Dim lrr As Long
+    Dim content As Range
+    Dim distrocopy As Range
+    Dim onlyupinr As Range
+    Dim lastrowresults As Long
+        
+   
+    Set distrocopy = Sheet11.Range("A1").CurrentRegion
+    Set onlyupinr = Sheet11.Range("A1", "A" & lastrowu)
+    
+    
+    cntr = 1
+    For Each Cell In onlyupinr
+        recsGathered = 0
+        
+        sampleq = distrocopy.Range("I" & cntr).Value
+        
+    
+            Do Until recsGathered = sampleq 'desiredRecs
+            
+            Randomize
+            rec = WorksheetFunction.RandBetween(LBound(bigArray, 1), UBound(bigArray, 1))
+                     
+            
+            If Not usedRowsDic.exists(rec) And Trim(bigArray(rec, 27)) = "Check" And Trim(bigArray(rec, 24)) = "US" And Trim(bigArray(rec, 2)) = Sheet11.Range("A" & Cell.Row) Then
+                
+                'Increment Counter
+                recsGathered = recsGathered + 1
+                
+                'Add to OutPut Array
+                For i = LBound(outArray, 2) To UBound(outArray, 2)
+                    outArray(recsGathered, i) = bigArray(rec, i)
+                Next i
+             
+                'Add rec
+                usedRowsDic.Add rec, True
+            End If
+            
+        Loop
+        cntr = cntr + 1
+        
+'OUTPUT 1
+
+    lastrowresults = destWS.Cells(Rows.Count, 1).End(xlUp).Row + 1
+    destWS.Range("A" & lastrowresults).Resize(sampleq, UBound(outArray, 2)).Value = outArray
+    Next Cell
+    
+    Erase outArray
+    Erase bigArray
+    cntr = 1
+    
+'CAN LOOP
+   
+    lastrow = srcWS.Range("A" & Rows.Count).End(xlUp).Row
+    
+    bigArray = srcWS.Range("A1:AH" & lastrow)
+    
+    ReDim outArray(LBound(bigArray, 1) To desiredRecs, LBound(bigArray, 2) To UBound(bigArray, 2))
+    
+    
+   For Each Cell In onlyupinr
+    recsGathered = 0
+    sampleq = distrocopy.Range("J" & cntr).Value
+    If sampleq > 0 Then
+        'resize our outarray to accomodate the number of records desired
+        ReDim outArray(LBound(bigArray, 1) To sampleq, LBound(bigArray, 2) To UBound(bigArray, 2))
+        
+    
+            Do Until recsGathered = sampleq 'desiredRecs
+            
+            Randomize
+            rec = WorksheetFunction.RandBetween(LBound(bigArray, 1), UBound(bigArray, 1))
+                     
+            
+            If Not usedRowsDic.exists(rec) And Trim(bigArray(rec, 27)) = "Check" And Trim(bigArray(rec, 24)) = "CA" And Trim(bigArray(rec, 2)) = Sheet11.Range("A" & Cell.Row) Then
+                
+                'Increment Counter
+                recsGathered = recsGathered + 1
+                
+                'Add to OutPut Array
+                For i = LBound(outArray, 2) To UBound(outArray, 2)
+                    outArray(recsGathered, i) = bigArray(rec, i)
+                Next i
+             
+                'Add rec
+                usedRowsDic.Add rec, True
+            End If
+    
+            
+        Loop
+        
+        
+    lastrowresults = destWS.Cells(Rows.Count, 1).End(xlUp).Row + 1
+    destWS.Range("A" & lastrowresults).Resize(sampleq, UBound(outArray, 2)).Value = outArray
+    End If
+    cntr = cntr + 1
+
+Next Cell
+    
+    '    MsgBox (usedRowsDic.Count)
+    Erase outArray
+    Erase bigArray
+    Set usedRowsDic = Nothing
+    Set srcWS = Nothing
+    Set destWS = Nothing
+    
+    Call Highlight
+    
+    
+End Sub
+Sub Highlight()
+    
+    Dim rngA        As Range
+    Dim Cell        As Range
+    Dim lr          As Long
+    Dim list        As Range
+    
+    lr = Sheet2.Cells(Rows.Count, 1).End(xlUp).Row
+    Set rngA = Sheet2.Range("AH2", "AH" & lr)
+    
+    For Each Cell In rngA
+        
+        If Cell.Value = WorksheetFunction.XLookup(Cell, Sheet10.Range("AH:AH"), Sheet10.Range("AH:AH"), "TRUE") Then
+            
+            On Error Resume Next
+            
+            Cell.EntireRow.Interior.Color = vbYellow
+            
+        End If
+        
+    Next Cell
+    
+End Sub
+
+Sub cleardistro()
+
+   
+    Dim lr          As Long
+    Dim distro      As Range
+    
+    lr = Sheet10.Cells(Rows.Count, 1).End(xlUp).Row
+    
+    Set distro = Sheet10.Range("A2:AH" & lr)
+    
+    distro.clear
+    
+End Sub
+
+Sub clear_selection()
+
+Dim rg As Range
+
+Set rg = Sheet2.Range("AH:AH")
+
+
+
+rg.clear
+
+    ActiveWindow.ScrollColumn = 1
+    Cells.Select
+    Rows("2:1048576").Select
+    
+    With Selection.Interior
+        .Pattern = xlNone
+        .TintAndShade = 0
+        .PatternTintAndShade = 0
+    End With
+    
+    
+    'ThisWorkbook.Worksheets("Audit").ShowAllData
+
+      
+End Sub
